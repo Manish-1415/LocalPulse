@@ -12,7 +12,7 @@ import bcrypt from "bcrypt"
 import { redis } from "../../configs/redisClient.js";
 import { mediaQueue } from "../../message_queue/queue.implementation.js";
 
-
+// caching added
 
 const userService = {
   createUserEntry: async (userInfoObj: CreateUserView) => {
