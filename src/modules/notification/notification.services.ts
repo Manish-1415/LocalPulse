@@ -26,11 +26,12 @@ const notificationService = {
 
     readAllComments : async (userId : string) => {
         let notifications = await Notification.deleteMany(
-            { recipient : userId,  read : false},
-            { $set : {read : true} }
+            { recipient : userId,  read : false}
         );
 
         if(!notifications) throw new ApiError(500, "Error Occurred while deleting notifications");
+
+        if(notifications.deletedCount === 0) return { notification : notifications.deletedCount, message : "No notifications to delete" }
 
         return notifications;
     },
@@ -39,7 +40,7 @@ const notificationService = {
     createNotification : async ({recipient , triggeredBy, post, read, message, type} : CreateNotificationView) => {
         if(triggeredBy.toString() === recipient.toString()) return;
 
-        const notification = await Notification.create({recipient, triggeredBy, post, read, message, type});
+        const notification = await Notification.create({recipient, triggeredBy, type, post, read, message});
 
         if(!notification) throw new ApiError(500, "Error Occurred While Creating Notification");
     }
