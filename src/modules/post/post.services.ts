@@ -4,10 +4,13 @@ import { redis } from "../../configs/redisClient.js";
 import type { CreatePostView,PostStatus,QueryView ,UpdatePostView } from "./post.types.js";
 // import type { updatePost } from "./post.controllers.js";
 import type {SortOrder, QueryFilter, InferSchemaType} from "mongoose";
-import { type FetchPostsView } from "./post.validations.js";
+import { type FetchPostsView, type UpdatePostInput } from "./post.validations.js";
 import type { JwtAccessPayload } from "../../utility/tokens.js";
 import { type HydratedDocument } from "mongoose";
 import { delFeedCache, delResolvedCache } from "../../configs/deleteFeedCache.js";
+import { Comment } from "../comment/comment.model.js";
+import eventBus from "../../configs/eda_implementation.js";
+import { mediaQueue } from "../../message_queue/queue.implementation.js";
 
 
 const postService = {
@@ -40,22 +43,39 @@ const postService = {
 
   updatePostEntry: async (
     postId: string,
-    postInfoObj: UpdatePostView,
+    postInfoObj: UpdatePostInput,
     userId: string
   ) => {
     const cache = await redis.get(`post:${postId}`);
 
     if(cache) await redis.del(`post:${postId}`);
 
+    const post = await Post.findById(postId);
+
+    if(!post) throw new ApiError(404, "Post Not Found");
+
+    let oldImages;
+    if(postInfoObj.images && post.images) {
+      oldImages = post.images.map( (singleObj) => singleObj.public_id );
+    }
+
     const updatedPost = await Post.findByIdAndUpdate(
       { _id: postId, author: userId },
       { $set: postInfoObj },
       { new: true, runValidators: true }
     );
-
+    
     if (!updatedPost) throw new ApiError(403, "Post Not Found or User is Not Authorized for this Operation");
 
     await redis.set(`post:${postId}`, JSON.stringify(updatedPost), 'EX', 900);
+
+    if(oldImages && oldImages.length > 0) {
+      const queuePromises = oldImages.map( (public_id) => {
+        mediaQueue.add("media-delete", {public_id});
+      });
+
+      await Promise.all(queuePromises);
+    } 
 
     return updatedPost;
   },
@@ -76,6 +96,7 @@ const postService = {
 
       await delFeedCache(lng, lat);
 
+      if(deletedPost.status === "resolved") await delResolvedCache(deletedPost.city);
     }
     return deletedPost;
   },
@@ -164,7 +185,7 @@ const postService = {
   },
 
 
-  updatePostStatusEntry : async (postP : HydratedDocument<InferSchemaType<typeof Post.schema>>, status : PostStatus) =>{
+  updatePostStatusEntry : async (postP : HydratedDocument<InferSchemaType<typeof Post.schema>>, status : PostStatus, userId : string) =>{
 
     const cache = await redis.get(`post:${postP._id}`);
 
@@ -173,6 +194,12 @@ const postService = {
     postP.status = status.status;
 
     await postP.save();
+
+    if(status.status === "resolved") {
+      const commenters = await Comment.distinct("author", {post : postP._id});
+
+      eventBus.emit("post_resolved", { commenters, postId : postP._id, userId });
+    }
 
     let lng, lat;
     if(postP.location?.coordinates[0] && postP.location?.coordinates[1]) {

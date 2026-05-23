@@ -9,8 +9,9 @@ import type { HydratedDocument } from "mongoose";
 import { type InferSchemaType } from "mongoose";
 import Post from "./post.model.js";
 
-export const createPost = async (req: Request, res: Response) => {
-  const postInfoObj: CreatePostView = createPostSchema.parse(req.body);
+// first param is params, then resBody, then reqBody, then query then local(not needed much)
+export const createPost = async (req: Request<{},{},CreatePostView>, res: Response) => {
+  const postInfoObj = createPostSchema.parse(req.body);
   const user : string = req.user?._id!;
 
   const post = await postService.createPostEntry(postInfoObj, user);
@@ -21,7 +22,7 @@ export const createPost = async (req: Request, res: Response) => {
 };
 
 
-export const getPost = async (req : Request<{id : string}, {}>, res : Response) => {
+export const getPost = async (req : Request<{id : string}>, res : Response) => {
   const postId : string = req.params.id;
 
   const post = await postService.getPostEntry(postId);
@@ -33,7 +34,7 @@ export const getPost = async (req : Request<{id : string}, {}>, res : Response) 
 
 
 export const updatePost = async (req : Request<{id : string}, {}, UpdatePostInput>, res : Response) => {
-  const postInfoObj : UpdatePostInput = updatePostSchema.parse(req.body);
+  const postInfoObj = updatePostSchema.parse(req.body);
   const postId = req.params.id;
   const userId = req.user?._id!;
 
@@ -64,11 +65,11 @@ export const fetchPosts = async (req : Request, res : Response) => {
 }
 
 
-export const fetchResolvedPost = async (req : Request<{id : string}>, res : Response) => {
-  const {id} = req.params;
+export const fetchResolvedPost = async (req : Request<{},{},{},{lastId : string}>, res : Response) => {
+  const lastId = req.query.lastId;
   const userPayload : JwtAccessPayload = req.user!;
 
-  const resolvedPosts = await postService.fetchResolvedPostEntries(id, userPayload);
+  const resolvedPosts = await postService.fetchResolvedPostEntries(lastId, userPayload);
 
   return res
   .status(200)
@@ -76,13 +77,13 @@ export const fetchResolvedPost = async (req : Request<{id : string}>, res : Resp
 }
 
 
-export const updatePostStatus = async (req : Request<{id : string}>, res : Response) => {
+export const updatePostStatus = async (req : Request<{},{},PostStatus>, res : Response) => {
 
-  const status : PostStatus = updatePostStatusSchema.parse(req.body);
+  const status = updatePostStatusSchema.parse(req.body);
 
   const post : HydratedDocument<InferSchemaType<typeof Post.schema>> = req.post;
 
-  const updatedPost = await postService.updatePostStatusEntry(post, status);
+  const updatedPost = await postService.updatePostStatusEntry(post, status, req.user?._id as string);
 
   return res
   .status(200)
