@@ -12,7 +12,7 @@ router.post("/login", isGuest, userLogin);
 
 router.post("/logout", authMiddleware, userLogOut);
 
-router.get("/getProfile/:id", authMiddleware ,getUser);
+router.get("/get_profile/:id", authMiddleware ,getUser);
 
 router.patch("/update_profile/:id", authMiddleware, updateUser);
 

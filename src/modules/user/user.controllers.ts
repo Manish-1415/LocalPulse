@@ -10,6 +10,7 @@ import userService from "./user.services.js";
 import type { JwtAccessPayload } from "../../utility/tokens.js";
 import type { RefTokenPayloadView, UpdatePasswordView, UpdateUserView } from "./user.types.js";
 
+
 export const createUser = async (req: Request, res: Response) => {
   const userInfoObj = createUserSchema.parse(req.body);
   // no need for manually throw err'rs now in express 5 u can avoid using async-Handler & try catch
@@ -87,7 +88,7 @@ export const updateUser = async (req: Request, res: Response) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, "User Updation complete", user));
+    .json(new ApiResponse(200, "User Profile Updation complete", user));
 };
 
 export const updatePassword = async (req: Request, res: Response) => {

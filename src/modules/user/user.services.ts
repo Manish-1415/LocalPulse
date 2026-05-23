@@ -15,10 +15,15 @@ import { mediaQueue } from "../../message_queue/queue.implementation.js";
 // caching added
 
 const userService = {
+
   createUserEntry: async (userInfoObj: CreateUserView) => {
     const user = await User.create(userInfoObj);
 
-    return user;
+    if(!user) throw new ApiError(500, "Error Occurred While Creating User Entry");
+
+    await redis.set(`user:${user._id}`, JSON.stringify(user));
+
+    return user.toJSON();
   },
 
   loginUserEntry: async (userInfoObj: LoginUserView) => {
@@ -35,6 +40,7 @@ const userService = {
       name: user.name,
       role: user.role,
       email: user.email,
+      city : user.city!
     });
 
     if (!accessToken)
@@ -56,6 +62,10 @@ const userService = {
   },
 
   logOutUserEntry : async (userPayload : JwtAccessPayload, refreshToken : string) => {
+    const cache = await redis.get(`user:${userPayload._id}`);
+
+    if(cache) await redis.del(`user:${userPayload._id}`)
+
     let user = await User.findOne({_id : userPayload._id});
 
     if(!user) throw new ApiError(404, "User Not Found");
@@ -82,7 +92,7 @@ const userService = {
 
     if(!user) throw new ApiError(404, "User Not Found");
 
-    redis.set(`user:${userId}`, JSON.stringify(user), 'EX', 900);
+    redis.set(`user:${userId}`, JSON.stringify(user));
 
     return user;
   },
@@ -118,7 +128,7 @@ const userService = {
 
     if(!updatedUser) throw new ApiError(500, "Error Occur While Updating User Profile");
 
-    await redis.set(`user:${userId}`, JSON.stringify(updatedUser) , 'EX', 900);
+    await redis.set(`user:${userId}`, JSON.stringify(updatedUser));
 
     return updatedUser;
   },
@@ -147,7 +157,7 @@ const userService = {
 
     await user.save();
 
-    await redis.set(`user:${userId}`, JSON.stringify(user), 'EX', 900);
+    await redis.set(`user:${userId}`, JSON.stringify(user));
 
     return user;
   },
@@ -159,7 +169,7 @@ const userService = {
 
     if(!user.refreshToken) throw new ApiError(400, "User is not loggedIn");
 
-    const compareRefToken = await bcrypt.compare(userPayload.refreshToken, user.refreshToken);
+    const compareRefToken : boolean = await bcrypt.compare(userPayload.refreshToken, user.refreshToken);
 
     if(!compareRefToken) throw new ApiError(403, "User is Unauthorized for this Operation");
 
@@ -167,7 +177,8 @@ const userService = {
       name : user.name,
       email : user.email,
       role : user.role,
-      _id : user._id.toString()
+      _id : user._id.toString(),
+      city : user.city!
     });
 
     return {user, accessToken}
