@@ -4,8 +4,8 @@ import commentService from "./comment.services.js";
 import ApiResponse from "../../utility/ApiResponse.js";
 
 
-export const createComment = async (req : Request, res : Response) => {
-    const postId : string = req.params.post_id as string;
+export const createComment = async (req : Request<{post_id : string}>, res : Response) => {
+    const postId = req.params.post_id;
     const parsedData = createCommentSchema.parse(req.body);
     const content : string = parsedData.body;
     const userId : string  = req.user?._id!;
@@ -18,8 +18,8 @@ export const createComment = async (req : Request, res : Response) => {
 }
 
 
-export const getComments = async (req : Request, res : Response) => {
-    const postId : string = req.params.post_id as string;
+export const getComments = async (req : Request<{post_id : string}>, res : Response) => {
+    const postId : string = req.params.post_id;
     
     const comments = await commentService.getCommentsEntries(postId);
 
@@ -31,8 +31,6 @@ export const getComments = async (req : Request, res : Response) => {
 export const deleteComment = async (req : Request<{post_id : string , comment_id : string} >, res : Response) => {
     const {post_id, comment_id} = req.params;
     const userId : string = req.user?._id!;
-
-
 
     const deletedComment = await commentService.deleteCommentEntry(post_id, comment_id, userId);
 

@@ -6,7 +6,7 @@ const commentSchema = new mongoose.Schema(
   {
     body: {
       type: String,
-      required: [true, 'Comment cannot be empty'],
+      required: true,
       trim: true,
       minlength: 1,
       maxlength: 500
