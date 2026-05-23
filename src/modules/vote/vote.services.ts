@@ -2,6 +2,8 @@ import ApiError from "../../utility/ApiError.js";
 import Vote from "./vote.model.js";
 import type { Vote as VoteType } from "./vote.validation.js";
 import Post from "../post/post.model.js";
+import eventBus from "../../configs/eda_implementation.js";
+import mongoose from "mongoose";
 
 // 1. Explicitly define a unified return structure for your controller payload
 interface VoteResponse {
@@ -14,7 +16,7 @@ interface VoteResponse {
 const voteService = {
     toggleVoteEntry: async (postId: string, userId: string, voteType: VoteType): Promise<VoteResponse> => {
 
-        const post = await Post.findById(postId);
+        const post = await Post.findById(postId).populate("author", "name");
         if (!post) throw new ApiError(404, "Post Not Found");
 
         const vote = await Vote.findOne({ post: postId, user: userId });
@@ -26,6 +28,17 @@ const voteService = {
 
             voteType.type === "upvote" ? post.upvotes += 1 : post.downvotes += 1;
             await post.save();
+
+            if(voteType.type == "upvote") {
+                eventBus.emit("vote_created", {
+                recipient : post.author,
+                triggeredBy : new mongoose.Types.ObjectId(userId),
+                read : false,
+                type : "upvote",
+                post : post._id,
+                message : `${(vote)}`
+            })
+            }
 
             return { 
                 vote: newVote, 

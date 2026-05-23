@@ -7,4 +7,4 @@ export type Vote = {
 
 export const toggleVoteSchema = z.object({
     type : z.enum(["upvote", "downvote"])
-})
+});

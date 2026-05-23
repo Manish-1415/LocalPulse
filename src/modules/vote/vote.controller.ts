@@ -5,8 +5,8 @@ import ApiResponse from "../../utility/ApiResponse.js";
 
 
 
-export const toggleVote = async (req : Request, res : Response) => {
-    const postId : string = req.params.post_id as string;
+export const toggleVote = async (req : Request<{post_id : string}>, res : Response) => {
+    const postId : string = req.params.post_id;
     const userId : string = req.user?._id!;
     const voteType : Vote = toggleVoteSchema.parse(req.body);
 
