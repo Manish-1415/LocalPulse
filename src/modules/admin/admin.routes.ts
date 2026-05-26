@@ -18,7 +18,7 @@ router.delete("delete_user/:user_id", authMiddleware, isAdminMiddleware, deleteU
 
 router.get("/get_posts", authMiddleware, isAdminMiddleware, getUsers);
 
-router.patch("update_post_status", authMiddleware, isAdminMiddleware, updatePostStatus);
+router.patch("update_post_status/:post_id", authMiddleware, isAdminMiddleware, updatePostStatus);
 
 
 // reports

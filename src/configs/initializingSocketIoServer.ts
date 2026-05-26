@@ -3,7 +3,7 @@ import { Server } from "socket.io";
 import ApiError from "../utility/ApiError.js";
 import { verifyAccessToken } from "../utility/tokens.js";
 import {Server as HttpServer} from "node:http";
-
+// this Server is a utility class
 
 let io : Server;
 // HttpServer is blueprint of what createServer creates / returns. 
